@@ -1,0 +1,27 @@
+name: publish
+
+# Wendi's CI force-pushes each release APK to the `drop` branch, together with this file
+# (GitHub reads a push's workflows from the pushed commit). This turns it into a Release,
+# which is what the app checks for updates. Source of truth: Wendi/release-channel/publish.yml.
+on:
+  push:
+    branches: [drop]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: drop
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(cat tag)
+          VER=${TAG#v}; VER=${VER%-*}
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "already released"; exit 0; fi
+          gh release create "$TAG" wendi-*.apk --title "闻笛 $VER" --notes-file notes.md --target "$(git rev-parse HEAD)" --latest
